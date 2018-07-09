@@ -10,6 +10,7 @@ import (
 
 const (
 	maxConcurrency = 1
+	maxErrors      = 1e3
 )
 
 var (
@@ -36,6 +37,8 @@ var (
 	check5xx = flag.Bool("check-server-errors", false, "")
 	check4xx = flag.Bool("check-client-errors", false, "")
 	check3xx = flag.Bool("check-redirection", false, "")
+	// set limits
+	maxErrsCount = flag.Int("max-errors-count", maxErrors, "")
 	website,
 	hostName string
 	re *regexp.Regexp
@@ -106,8 +109,13 @@ func setupCmd() {
 		}
 		re = r
 	}
+
 	if *concurrency <= 0 {
 		*concurrency = maxConcurrency
+	}
+
+	if *maxErrsCount <= 0 {
+		*maxErrsCount = maxErrors
 	}
 
 }
@@ -149,7 +157,8 @@ OPTIONS:
     Regular expression pattern to match filename against, if URL doesn't match fetching will be skipped (default: '')
  --concurrency-level num
     Number of concurrent requests to be performed at once (default: %d)
-
+ --max-errors-count
+    Max errors count before exit (default: %d)
 
 AURGUMENTS:
  URL
@@ -160,5 +169,6 @@ AURGUMENTS:
 		tpl,
 		os.Args[0],
 		maxConcurrency,
+		maxErrors,
 	)
 }
