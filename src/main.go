@@ -5,15 +5,13 @@ import (
 )
 
 var (
-	urlQueue    = make(chan *Link, 100)
+	urlQueue    = make(chan string, 100)
 	resultQueue = make(chan *Result, 100)
 	limit       = make(chan struct{}, *concurrency)
 )
 
 func main() {
-	urlQueue <- &Link{
-		URL: website,
-	}
+	urlQueue <- website
 
 	for {
 		select {
@@ -21,8 +19,7 @@ func main() {
 			limit <- struct{}{}
 
 			go func() {
-
-				resultQueue <- fetch(u.GetURL())
+				resultQueue <- fetch(u)
 			}()
 		case r := <-resultQueue:
 			if r == nil {

@@ -22,7 +22,7 @@ type Result struct {
 
 // PrintText prints result in an easy format
 func (r *Result) PrintText() {
-	fmt.Printf(`%-9s %s`, r.Code, r.URL)
+	fmt.Printf("%-9s %s\n", r.Code, r.URL)
 }
 
 // PrintJSON prints json value of the result

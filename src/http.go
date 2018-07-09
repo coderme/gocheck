@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const (
@@ -26,7 +27,9 @@ var (
 		binName, version,
 		src,
 	)
-	client     = &http.Client{}
+	client = &http.Client{
+		CheckRedirect: noRedirect,
+	}
 	rePatterns = map[string]*regexp.Regexp{
 		"src":  regexp.MustCompile(`(?i) src=["']?([^<>"']+)`),
 		"href": regexp.MustCompile(`(?i) href=["']?([^<>"']+)`),
@@ -44,7 +47,9 @@ func fetch(link string) *Result {
 
 	r := &Result{}
 	r.URL = link
+	r.Time = time.Now()
 	req, err := http.NewRequest(`GET`, link, nil)
+	r.Elapsed = time.Since(r.Time)
 
 	if err != nil {
 		return patchedResult(connectError, r)
@@ -65,6 +70,8 @@ func fetch(link string) *Result {
 	if err != nil {
 		return patchedResult(connectError, r)
 	}
+
+	go discoverURLs(link, string(b))
 
 	return patchedResult(resp.StatusCode, r)
 }
@@ -126,7 +133,55 @@ func isHTML(c string) bool {
 	return false
 }
 
-func discoverURLs(page, content []byte) {
-	patterns
+func discoverURLs(pageURL, content string) {
+	ps := []*regexp.Regexp{}
 
+	if *watchHREF {
+		ps = append(ps, rePatterns["href"])
+	}
+
+	if *watchSRC {
+		ps = append(ps, rePatterns["src"])
+	}
+
+	for _, p := range ps {
+		matches := p.FindAllStringSubmatch(content, -1)
+		if matches == nil {
+			continue
+		}
+
+		for _, m := range matches {
+			// m[0] is the whole matched string
+			// m[1] is URL
+			u, err := resolveURL(pageURL, m[1])
+			if err != nil {
+				continue
+			}
+			if !isSameHost(hostName, u) &&
+				!*spanHosts {
+				continue
+			}
+
+			urlQueue <- u
+
+		}
+
+	}
+
+}
+
+func isSameHost(host, u string) bool {
+	p, err := url.Parse(u)
+	if err != nil {
+		return false
+	}
+	h := strings.Trim(host, "/. ")
+	if h == p.Host {
+		return true
+	}
+	return false
+}
+
+func noRedirect(req *http.Request, via []*http.Request) error {
+	return http.ErrUseLastResponse
 }

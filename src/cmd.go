@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -32,11 +33,12 @@ var (
 	outJSON   = flag.Bool("json", false, "")
 	j         = flag.Bool("j", false, "")
 	// what things you care about
-	check5xx = flag.Bool("check-server-errors", true, "")
-	check4xx = flag.Bool("check-client-errors", true, "")
+	check5xx = flag.Bool("check-server-errors", false, "")
+	check4xx = flag.Bool("check-client-errors", false, "")
 	check3xx = flag.Bool("check-redirection", false, "")
-	website  string
-	re       *regexp.Regexp
+	website,
+	hostName string
+	re *regexp.Regexp
 )
 
 func init() {
@@ -44,34 +46,63 @@ func init() {
 		exit(2, "Running as ROOT isn't your worst mistake, is it!!")
 	}
 
+	flag.Usage = usage
 	flag.Parse()
+
 	setupCmd()
 }
 
 func setupCmd() {
 	args := flag.Args()
-	if len(args) > 1 {
-		exit(1, "URL can be given only once, for usage see: -h | --help")
-	} else if len(args) == 0 {
-		exit(1, "URL to be checked is required, for usage see: -h | --help")
+
+	if *h || *whatHelp {
+		usage()
 	}
-	website = args[0]
+
+	if *l || *whatLicense {
+		showLicense()
+	}
+
+	if *v || *whatVersion {
+		showVersion()
+	}
+
+	if len(args) > 1 {
+		exit(1, "Error: URL cannot be given more than once, for usage see: -h | --help")
+	} else if len(args) == 0 {
+		exit(1, "Error: URL to be checked is missing, for usage see: -h | --help")
+	} else {
+		parsed, err := url.Parse(args[0])
+		if err != nil {
+			exit(1, "Error: URL given is not parsable, for usage see: -h | --help")
+		}
+
+		if parsed.Host == "" {
+			exit(1, "Error: URL host is missing, for usage see: -h | --help")
+		}
+
+		if parsed.Scheme == "" {
+			parsed.Scheme = "http"
+		}
+		website = parsed.String()
+		hostName = parsed.Host
+	}
 
 	if !*watchHREF && !*watchSRC {
-		exit(1, "Nothing to 'watch', for usage see: -h | --help")
+		exit(1, "Error: Nothing to 'watch', for usage see: -h | --help")
 	}
 
 	if !*check5xx && !*check4xx && !*check3xx {
-		exit(1, "Nothing to 'check', for usage see: -h | --help")
+		exit(1, "Error: Nothing to 'check', for usage see: -h | --help")
 	}
 
 	if *rePattern != "" {
 		if strings.Contains(*rePattern, `/`) {
-			exit(1, "regexp file pattern cannot contain a slash '/'")
+			exit(1, "Error: regexp file pattern conains a slash '/'")
 		}
 		r, err := regexp.Compile(*rePattern)
 		if err != nil {
-			exit(1, "Nasty regexp pattern failed to compile", err)
+			exit(1, "Error: Nasty regexp pattern failed to compile", err)
 		}
 		re = r
 	}
@@ -94,8 +125,6 @@ FLAGS:
     Show License and exit.
  -h | --help
     Show help and exit.
- -j | --json
-    Display check results as JSON (default: false)
 
  --check-server-errors
     Check for HTTP 5xx servers errors (default: false)
@@ -110,6 +139,9 @@ FLAGS:
     Watch 'src' attributes URL (default: false)
  --span-hosts
     Follow links hosted on other websites (default: false)
+
+ -j | --json
+    Display check results as JSON (default: false)
 
 
 OPTIONS:
