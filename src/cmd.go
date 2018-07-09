@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	maxConcurrency = 1
-	maxErrors      = 1e3
+	maxConcurrency     = 1
+	maxErrors      int = 1e3
 )
 
 var (

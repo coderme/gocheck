@@ -12,6 +12,7 @@ var (
 
 func main() {
 	urlQueue <- website
+	errs := 0
 
 	for {
 		select {
@@ -29,6 +30,13 @@ func main() {
 				r.PrintJSON()
 			} else {
 				r.PrintText()
+			}
+			if r.ErrorServer || r.ErrorClient {
+				errs++
+			}
+
+			if errs >= *maxErrsCount {
+				exit(0)
 			}
 		}
 	}
