@@ -6,26 +6,29 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const (
 	maxConcurrency     = 1
 	maxErrors      int = 1e3
+	maxVisited     int = 1e3
+	defaultWait        = 3 * time.Second
 )
 
 var (
 	concurrency = flag.Int("concurrency-level", maxConcurrency, "")
 	// flags
 	// internal
-	// help
-	whatHelp = flag.Bool("help", false, "")
-	h        = flag.Bool("h", false, "")
 	// version
 	whatVersion = flag.Bool("version", false, "")
 	v           = flag.Bool("v", false, "")
 	// license
 	whatLicense = flag.Bool("license", false, "")
 	l           = flag.Bool("l", false, "")
+	debug       = flag.Bool("debug", false, "")
+	d           = flag.Bool("d", false, "")
+
 	// general
 	watchHREF = flag.Bool("watch-href", false, "")
 	watchSRC  = flag.Bool("watch-src", false, "")
@@ -38,7 +41,10 @@ var (
 	check4xx = flag.Bool("check-client-errors", false, "")
 	check3xx = flag.Bool("check-redirection", false, "")
 	// set limits
-	maxErrsCount = flag.Int("max-errors-count", maxErrors, "")
+	maxErrsCount    = flag.Int("max-errors-count", maxErrors, "")
+	timeWait        = flag.Duration("time-wait", defaultWait, "")
+	maxVisitedCount = flag.Int("max-visited-count", maxVisited, "")
+	//
 	website,
 	hostName string
 	re *regexp.Regexp
@@ -57,10 +63,6 @@ func init() {
 
 func setupCmd() {
 	args := flag.Args()
-
-	if *h || *whatHelp {
-		usage()
-	}
 
 	if *l || *whatLicense {
 		showLicense()
@@ -118,12 +120,16 @@ func setupCmd() {
 		*maxErrsCount = maxErrors
 	}
 
+	if *d || *debug {
+		*debug = true
+	}
+
 }
 
 func usage() {
 	const tpl = `
 
-Usage: %s [-v | --version] [-h | --help] [-l | --license] [--watch-href] [--watch-src] [--watch-pattern regexp] [--span-hosts][-j | --json] [--check-server-errors] [--check-client-errors] [--check-redirection] URL
+Usage: %s [-v | --version] [-h | --help] [-l | --license] [-vvv | --verbose] [--watch-href] [--watch-src] [--watch-pattern regexp] [--span-hosts][-j | --json] [--check-server-errors] [--check-client-errors] [--check-redirection] [--max-errors-count NUM] [--max-visited-count NUM] [--time-wait DURATION]  URL
 
 
 FLAGS:
@@ -133,6 +139,8 @@ FLAGS:
     Show License and exit.
  -h | --help
     Show help and exit.
+ -d | --debug
+    Display whats going on.
 
  --check-server-errors
     Check for HTTP 5xx servers errors (default: false)
@@ -157,8 +165,13 @@ OPTIONS:
     Regular expression pattern to match filename against, if URL doesn't match fetching will be skipped (default: '')
  --concurrency-level num
     Number of concurrent requests to be performed at once (default: %d)
- --max-errors-count
+ --max-errors-count NUM
     Max errors count before exit (default: %d)
+ --max-visited-count NUM
+    Max visited URLs remembered, higher values likely will prevent checking already checked URLs yet requires more memory (RAM) (default: %d)
+ --time-wait DURATION
+    Duration of time of inactivity before the program exits (default: %v)
+
 
 AURGUMENTS:
  URL
@@ -170,5 +183,7 @@ AURGUMENTS:
 		os.Args[0],
 		maxConcurrency,
 		maxErrors,
+		defaultWait,
+		maxVisited,
 	)
 }

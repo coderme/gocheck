@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -15,11 +16,35 @@ const (
 	connectError = "xxx"
 )
 
-// Link embrace a URL and its parent page
-// where its found
-type Link struct {
-	Parent,
-	URL string
+// visitLog keeps a log of visited URLs
+type visitLog struct {
+	visited map[string]int
+	mw      *sync.RWMutex
+}
+
+func (v *visitLog) keep(u string) {
+	v.mw.Lock()
+	defer v.mw.Unlock()
+	if len(v.visited) >= *maxVisitedCount {
+		showDebug("MaxVisitedCount: Reached :(")
+		return
+	}
+	v.visited[u] = 1
+
+}
+
+func (v *visitLog) isVisited(u string) bool {
+	v.mw.RLock()
+	defer v.mw.RUnlock()
+	_, ok := v.visited[u]
+	return ok
+}
+
+func newVisitLog() *visitLog {
+	return &visitLog{
+		visited: make(map[string]int),
+		mw:      &sync.RWMutex{},
+	}
 }
 
 var (
@@ -34,6 +59,7 @@ var (
 		"src":  regexp.MustCompile(`(?i) src=["']?([^<>"']+)`),
 		"href": regexp.MustCompile(`(?i) href=["']?([^<>"']+)`),
 	}
+	visitedLog = newVisitLog()
 )
 
 func fetch(link string) *Result {
@@ -42,6 +68,7 @@ func fetch(link string) *Result {
 	}()
 
 	if link == "" {
+		showDebug("FETCH: Empty Link")
 		return nil
 	}
 
@@ -56,6 +83,8 @@ func fetch(link string) *Result {
 	}
 
 	req.Header.Set(`User-Agent`, userAgent)
+
+	showDebug("FETCH:", link)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -153,15 +182,28 @@ func discoverURLs(pageURL, content string) {
 		for _, m := range matches {
 			// m[0] is the whole matched string
 			// m[1] is URL
-			u, err := resolveURL(pageURL, m[1])
-			if err != nil {
-				continue
-			}
-			if !isSameHost(hostName, u) &&
-				!*spanHosts {
+			mm := m[1]
+			if strings.HasPrefix(mm, "mailto:") {
+				showDebug("SKIPPED-EMAIL", mm)
 				continue
 			}
 
+			u, err := resolveURL(pageURL, mm)
+			if err != nil {
+				showDebug("ResolveError", err)
+				continue
+			}
+
+			if !isSameHost(hostName, u) &&
+				!*spanHosts {
+				showDebug("SKIPPED-SPANNED", u)
+				continue
+			}
+			if visitedLog.isVisited(u) {
+				showDebug("SKIPPED-VISITED", u)
+				continue
+			}
+			visitedLog.keep(u)
 			urlQueue <- u
 
 		}
