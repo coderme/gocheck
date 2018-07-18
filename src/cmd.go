@@ -14,6 +14,7 @@ const (
 	maxErrors      int = 1e3
 	maxVisited     int = 1e3
 	defaultWait        = 3 * time.Second
+	defaultDelay       = 1 * time.Second
 )
 
 var (
@@ -43,6 +44,7 @@ var (
 	// set limits
 	maxErrsCount    = flag.Int("max-errors-count", maxErrors, "")
 	timeWait        = flag.Duration("time-wait", defaultWait, "")
+	timeDelay       = flag.Duration("time-delay", defaultDelay, "")
 	maxVisitedCount = flag.Int("max-visited-count", maxVisited, "")
 	//
 	website,
@@ -124,12 +126,17 @@ func setupCmd() {
 		*debug = true
 	}
 
+	if *j || *outJSON {
+		*outJSON = true
+		*debug = false
+	}
+
 }
 
 func usage() {
 	const tpl = `
 
-Usage: %s [-v | --version] [-h | --help] [-l | --license] [-vvv | --verbose] [--watch-href] [--watch-src] [--watch-pattern regexp] [--span-hosts][-j | --json] [--check-server-errors] [--check-client-errors] [--check-redirection] [--max-errors-count NUM] [--max-visited-count NUM] [--time-wait DURATION]  URL
+Usage: %s [-v | --version] [-h | --help] [-l | --license] [-vvv | --verbose] [--watch-href] [--watch-src] [--watch-pattern regexp] [--span-hosts][-j | --json] [--check-server-errors] [--check-client-errors] [--check-redirection] [--max-errors-count NUM] [--max-visited-count NUM] [--time-wait DURATION] [--time-delay DURATION]   URL
 
 
 FLAGS:
@@ -171,6 +178,9 @@ OPTIONS:
     Max visited URLs remembered, higher values likely will prevent checking already checked URLs yet requires more memory (RAM) (default: %d)
  --time-wait DURATION
     Duration of time of inactivity before the program exits (default: %v)
+ --time-delay DURATION
+    Duration of time to delay the next URL fetching (default: %v)
+
 
 
 AURGUMENTS:
@@ -183,7 +193,8 @@ AURGUMENTS:
 		os.Args[0],
 		maxConcurrency,
 		maxErrors,
-		defaultWait,
 		maxVisited,
+		defaultWait,
+		defaultDelay,
 	)
 }

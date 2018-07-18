@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -71,6 +72,8 @@ func fetch(link string) *Result {
 		showDebug("FETCH: Empty Link")
 		return nil
 	}
+	// delay it?
+	<-time.After(*timeDelay)
 
 	r := &Result{}
 	r.URL = link
@@ -134,6 +137,8 @@ func patchedResult(code interface{}, r *Result) *Result {
 
 // resolveURL resolve URL relative to Parent page
 func resolveURL(parent, u string) (string, error) {
+	u = html.UnescapeString(u)
+
 	uP, err := url.Parse(u)
 	if err != nil {
 		return "", err
@@ -145,6 +150,9 @@ func resolveURL(parent, u string) (string, error) {
 	}
 	if uP.Host == "" {
 		uP.Host = pP.Host
+		uP.Scheme = pP.Scheme
+	}
+	if uP.Scheme == "" {
 		uP.Scheme = pP.Scheme
 	}
 	return uP.String(), nil
