@@ -202,11 +202,20 @@ func discoverURLs(pageURL, content string) {
 				continue
 			}
 
-			if !isSameHost(hostName, u) &&
-				!*spanHosts {
-				showDebug("SKIPPED-SPANNED", u)
-				continue
+			if !sameHost(hostName, u) {
+				if subdomains(hostName, u) &&
+					!*spanSubdomains {
+					showDebug("SKIPPED-SUBDOMAINS", u)
+					continue
+				}
+
+				if !subdomains(hostName, u) &&
+					!*spanHosts {
+					showDebug("SKIPPED-SPANNED", u)
+					continue
+				}
 			}
+
 			if visitedLog.isVisited(u) {
 				showDebug("SKIPPED-VISITED", u)
 				continue
@@ -220,7 +229,7 @@ func discoverURLs(pageURL, content string) {
 
 }
 
-func isSameHost(host, u string) bool {
+func sameHost(host, u string) bool {
 	p, err := url.Parse(u)
 	if err != nil {
 		return false
@@ -230,6 +239,52 @@ func isSameHost(host, u string) bool {
 		return true
 	}
 	return false
+}
+
+// subdomains checks whether
+// host and u are sharing the same domain
+func subdomains(host, u string) (b bool) {
+	p, err := url.Parse(u)
+	if err != nil {
+		return
+	}
+
+	h := strings.Trim(host, "/. ")
+	if h == p.Host {
+		return
+	}
+
+	// this will solve it if any of the
+	// hosts is included in the other
+	if strings.HasSuffix(h, p.Host) ||
+		strings.HasSuffix(p.Host, h) {
+		return true
+	}
+
+	// we need to lookup one part each time
+	// starting from the end of the Host name
+	hostParts := strings.Split(h, ".")
+	uParts := strings.Split(p.Host, ".")
+	hostPartsCount := len(hostParts)
+	uPartsCount := len(uParts)
+	var c int
+
+	if hostPartsCount > uPartsCount {
+		c = uPartsCount - 1
+	} else {
+		c = hostPartsCount - 1
+	}
+
+	for ; c > -1; c-- {
+		// no need to check when c == 0
+		// result should be already obvious!!
+		if hostParts[c] != uParts[c] &&
+			c > 0 {
+			return
+		}
+	}
+	return true
+
 }
 
 func noRedirect(req *http.Request, via []*http.Request) error {

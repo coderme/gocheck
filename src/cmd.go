@@ -31,12 +31,13 @@ var (
 	d           = flag.Bool("d", false, "")
 
 	// general
-	watchHREF = flag.Bool("watch-href", false, "")
-	watchSRC  = flag.Bool("watch-src", false, "")
-	rePattern = flag.String("watch-pattern", "", "")
-	spanHosts = flag.Bool("span-hosts", false, "")
-	outJSON   = flag.Bool("json", false, "")
-	j         = flag.Bool("j", false, "")
+	watchHREF      = flag.Bool("watch-href", false, "")
+	watchSRC       = flag.Bool("watch-src", false, "")
+	rePattern      = flag.String("watch-pattern", "", "")
+	spanHosts      = flag.Bool("span-hosts", false, "")
+	spanSubdomains = flag.Bool("span-subdomains", false, "")
+	outJSON        = flag.Bool("json", false, "")
+	j              = flag.Bool("j", false, "")
 	// what things you care about
 	check5xx = flag.Bool("check-server-errors", false, "")
 	check4xx = flag.Bool("check-client-errors", false, "")
@@ -136,7 +137,7 @@ func setupCmd() {
 func usage() {
 	const tpl = `
 
-Usage: %s [-v | --version] [-h | --help] [-l | --license] [-vvv | --verbose] [--watch-href] [--watch-src] [--watch-pattern regexp] [--span-hosts][-j | --json] [--check-server-errors] [--check-client-errors] [--check-redirection] [--max-errors-count NUM] [--max-visited-count NUM] [--time-wait DURATION] [--time-delay DURATION]   URL
+Usage: %s [-v | --version] [-h | --help] [-l | --license] [-vvv | --verbose] [--watch-href] [--watch-src] [--watch-pattern regexp] [--span-hosts] [--span-subdomains] [-j | --json] [--check-server-errors] [--check-client-errors] [--check-redirection] [--max-errors-count NUM] [--max-visited-count NUM] [--time-wait DURATION] [--time-delay DURATION]   URL
 
 
 FLAGS:
@@ -161,7 +162,9 @@ FLAGS:
  --watch-src
     Watch 'src' attributes URL (default: false)
  --span-hosts
-    Follow links hosted on other websites (default: false)
+    Follow links hosted on other websites, including subdomains (default: false)
+ --span-subdomains
+    Follow links hosted on other subdomains (default: false)
 
  -j | --json
     Display check results as JSON (default: false)
