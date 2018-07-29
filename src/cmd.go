@@ -106,7 +106,7 @@ func setupCmd() {
 
 	if *rePattern != "" {
 		if strings.Contains(*rePattern, `/`) {
-			exit(1, "Error: regexp file pattern conains a slash '/'")
+			exit(1, "Error: regexp file pattern should not contain a slash '/'")
 		}
 		r, err := regexp.Compile(*rePattern)
 		if err != nil {
@@ -129,7 +129,6 @@ func setupCmd() {
 
 	if *j || *outJSON {
 		*outJSON = true
-		*debug = false
 	}
 
 }

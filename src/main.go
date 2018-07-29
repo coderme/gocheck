@@ -41,7 +41,7 @@ func main() {
 			}
 
 			if errs >= *maxErrsCount {
-				exit(0)
+				exit(1)
 			}
 		case <-tick:
 			if time.Since(touched) > *timeWait {

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -56,7 +57,7 @@ var (
 	client = &http.Client{
 		CheckRedirect: noRedirect,
 	}
-	rePatterns = map[string]*regexp.Regexp{
+	reAttrs = map[string]*regexp.Regexp{
 		"src":  regexp.MustCompile(`(?i) src=["']?([^<>"']+)`),
 		"href": regexp.MustCompile(`(?i) href=["']?([^<>"']+)`),
 	}
@@ -171,17 +172,17 @@ func isHTML(c string) bool {
 }
 
 func discoverURLs(pageURL, content string) {
-	ps := []*regexp.Regexp{}
+	patterns := []*regexp.Regexp{}
 
 	if *watchHREF {
-		ps = append(ps, rePatterns["href"])
+		patterns = append(patterns, reAttrs["href"])
 	}
 
 	if *watchSRC {
-		ps = append(ps, rePatterns["src"])
+		patterns = append(patterns, reAttrs["src"])
 	}
 
-	for _, p := range ps {
+	for _, p := range patterns {
 		matches := p.FindAllStringSubmatch(content, -1)
 		if matches == nil {
 			continue
@@ -220,6 +221,12 @@ func discoverURLs(pageURL, content string) {
 				showDebug("SKIPPED-VISITED", u)
 				continue
 			}
+
+			if !matchRegexp(u) {
+				showDebug("SKIPPED-REGEXP", u)
+				continue
+			}
+
 			visitedLog.keep(u)
 			urlQueue <- u
 
@@ -285,6 +292,17 @@ func subdomains(host, u string) (b bool) {
 	}
 	return true
 
+}
+
+func matchRegexp(s string) bool {
+	if re == nil ||
+		re.MatchString(
+			filepath.Base(s),
+		) {
+		return true
+	}
+
+	return false
 }
 
 func noRedirect(req *http.Request, via []*http.Request) error {

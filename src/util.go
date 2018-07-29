@@ -4,18 +4,17 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 )
 
 // exit println 'msgs' and exit with 'code'
 func exit(code int, msgs ...interface{}) {
-	fmt.Println(msgs...)
+	fmt.Fprintln(os.Stderr, msgs...)
 	os.Exit(code)
 }
 
 // exitf prints formatted 'msgs' using 'tpl' and exit with 'code'
 func exitf(code int, tpl string, msgs ...interface{}) {
-	fmt.Printf(tpl, msgs...)
+	fmt.Fprintf(os.Stderr, tpl, msgs...)
 	os.Exit(code)
 }
 
@@ -26,14 +25,10 @@ func showDebug(v ...interface{}) {
 	}
 }
 
-// showDebugF prints foormated values if debug enabled
+// showDebugF prints formated values if debug enabled
 func showDebugF(format string, v ...interface{}) {
 	if !*debug {
 		return
-	}
-
-	if !strings.HasSuffix(format, "\n") {
-		format += "\n"
 	}
 
 	log.Printf(format, v...)
